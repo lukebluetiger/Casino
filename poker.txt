@@ -1,0 +1,7 @@
+assign a list of cards
+assign a starting pot 
+assign a game start
+
+if player input is start
+    round 1
+    

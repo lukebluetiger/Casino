@@ -14,6 +14,7 @@ user_money = {}
 @client.event
 async def on_ready():
     print(f'{client.user.name} has connected to Discord!')
+    await client.add_cog(Poker(bot=client))
 
 
 @client.command()
@@ -41,10 +42,10 @@ async def give(ctx, user: discord.Member, amount: float):
 
     await ctx.send(f'{ctx.author.mention} gave {user.mention} ${amount:,.2f}')
 
-values = {"♠️1": 1, "♠️2": 2, "♠️3": 3, "♠️4": 4, "♠️5": 5, "♠️6": 6, "♠️7": 7, "♠️8": 8, "♠️9": 9, "♠️10": 10, "♠️11": 11, "♠️12": 12, "♠️13": 13,
-          "♥️1": 1, "♥️2": 2, "♥️3": 3, "♥️4": 4, "♥️5": 5, "♥️6": 6, "♥️7": 7, "♥️8": 8, "♥️9": 9, "♥️10": 10, "♥️11": 11, "♥️12": 12, "♥️13": 13,
-          "♦️1": 1, "♦️2": 2, "♦️3": 3, "♦️4": 4, "♦️5": 5, "♦️6": 6, "♦️7": 7, "♦️8": 8, "♦️9": 9, "♦️10": 10, "♦️11": 11, "♦️12": 12, "♦️13": 13,
-          "♣️1": 1, "♣️2": 2, "♣️3": 3, "♣️4": 4, "♣️5": 5, "♣️6": 6, "♣️7": 7, "♣️8": 8, "♣️9": 9, "♣️10": 10, "♣️11": 11, "♣️12": 12, "♣️13": 13}
+value = {"♠️1": 1, "♠️2": 2, "♠️3": 3, "♠️4": 4, "♠️5": 5, "♠️6": 6, "♠️7": 7, "♠️8": 8, "♠️9": 9, "♠️10": 10, "♠️11": 11, "♠️12": 12, "♠️13": 13,
+         "♥️1": 1, "♥️2": 2, "♥️3": 3, "♥️4": 4, "♥️5": 5, "♥️6": 6, "♥️7": 7, "♥️8": 8, "♥️9": 9, "♥️10": 10, "♥️11": 11, "♥️12": 12, "♥️13": 13,
+         "♦️1": 1, "♦️2": 2, "♦️3": 3, "♦️4": 4, "♦️5": 5, "♦️6": 6, "♦️7": 7, "♦️8": 8, "♦️9": 9, "♦️10": 10, "♦️11": 11, "♦️12": 12, "♦️13": 13,
+         "♣️1": 1, "♣️2": 2, "♣️3": 3, "♣️4": 4, "♣️5": 5, "♣️6": 6, "♣️7": 7, "♣️8": 8, "♣️9": 9, "♣️10": 10, "♣️11": 11, "♣️12": 12, "♣️13": 13}
 
 
 class Poker(commands.Cog):
@@ -58,7 +59,6 @@ class Poker(commands.Cog):
         self.pot = 0
         self.round_num = 0
         self.game_start = False
-        self.game_handler = None
 
     def deal(self):
         hand = []
@@ -74,53 +74,71 @@ class Poker(commands.Cog):
         self.pot += bet
         self.money -= bet
         round_card = self.cards[random.randint(0, len(self.cards)-1)]
+        self.table.append(round_card)
         self.cards.remove(round_card)
-        return round_card
+        return self.table
 
-    @commands.command()
-    async def poker(self, ctx, **kwargs):
+    def winner(self):
+        score = 0
+        bot_score = 0
+        self.hand.append(self.table)
+        self.bot_hand.append(self.table)
+        for card in self.hand:
+            for i in range(0, len(self.hand)-1):
+                if value[card] == value[(self.hand[(len(self.hand)-1)-i])]:
+                    score += 1
+        for card in self.bot_hand:
+            for i in range(0, len(self.bot_hand)-1):
+                if value[card] == value[(self.bot_hand[(len(self.bot_hand)-1)-i])]:
+                    bot_score += 1
+        if score > bot_score:
+            winner = True
+        else:
+            winner = False
+        return winner
+
+    @commands.command(name='poker')
+    async def poker(self, ctx, *, game_handler, bet_amount=0):
         # detect the command
-        print(ctx.message.content)
-        if 'start' in ctx.message.content:
-            self.game_handler = 'start'
-        elif 'bet' in ctx.message.content:
-            self.game_handler = 'bet'
-            bet_amount = int(ctx.message.content.split(' ')[2])
-        elif 'fold' in ctx.message.content:
-            self.game_handler = 'fold'
-        if self.game_handler == "start":
+        if game_handler == "start":
             self.game_start = True
             self.pot = 0
             self.round_num = 1
             self.money = 2500
+            self.table = []
+            self.hand = []
+            self.bot_hand = []
             # random card from deck
             # when we take a card from a deck, we are removing the card
-            hand = self.deal()
-            await ctx.send(hand[0])
-            await ctx.send(hand[1])
+            self.hand = self.deal()
+            self.bot_hand = self.deal()
+            await ctx.send("Your cards are `{}` and `{}`. What would you like to do?".format(self.hand[0], self.hand[1]))
 
-        elif self.game_handler == "bet":
+        elif game_handler == "bet":
             if self.round_num == 1:
-                card1 = self.round(int(bet_amount))
-                await ctx.send(card1)
+                self.table = self.round(int(bet_amount))
+                await ctx.send("`{}`".format(self.table[0]))
                 self.round_num += 1
             elif self.round_num == 2:
-                card2 = self.round(int(bet_amount))
-                await ctx.send(card2)
+                self.table = self.round(int(bet_amount))
+                await ctx.send("`{}`".format(self.table[1]))
                 self.round_num += 1
             elif self.round_num == 3:
-                card3 = self.round(int(bet_amount))
-                await ctx.send(card3)
-                self.round_num += 1
+                self.table = self.round(int(bet_amount))
+                await ctx.send("`{}`".format(self.table[2]))
+                winner = self.winner()
+                if winner:
+                    await ctx.send("Winner! You win {}.".format(self.pot))
 
-        elif self.game_handler == "fold":
+        elif game_handler == "fold":
+            await ctx.send("Fold. Lost {}.".format(self.pot))
             self.game_start == False
 
+        elif game_handler == "help":
+            await ctx.send("`start - starts the game \n bet (amount) - bets amount of money \n check - equal to betting 0 \n fold - folds the for the current game`")
 
-client.add_cog(Poker(client))
 
-
-@client.command()
+@ client.command()
 async def gamba(ctx, *, gambaamount=10):
     for messagecount in range(0, gambaamount):
         await ctx.send("GAMBA ")
