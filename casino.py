@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 import random
-import asyncio
 
 token = open('C:/Users/Luke/Documents/casino/token.txt')
 
@@ -42,19 +41,16 @@ async def give(ctx, user: discord.Member, amount: float):
 
     await ctx.send(f'{ctx.author.mention} gave {user.mention} ${amount:,.2f}')
 
-value = {"♠️1": 1, "♠️2": 2, "♠️3": 3, "♠️4": 4, "♠️5": 5, "♠️6": 6, "♠️7": 7, "♠️8": 8, "♠️9": 9, "♠️10": 10, "♠️11": 11, "♠️12": 12, "♠️13": 13,
-         "♥️1": 1, "♥️2": 2, "♥️3": 3, "♥️4": 4, "♥️5": 5, "♥️6": 6, "♥️7": 7, "♥️8": 8, "♥️9": 9, "♥️10": 10, "♥️11": 11, "♥️12": 12, "♥️13": 13,
-         "♦️1": 1, "♦️2": 2, "♦️3": 3, "♦️4": 4, "♦️5": 5, "♦️6": 6, "♦️7": 7, "♦️8": 8, "♦️9": 9, "♦️10": 10, "♦️11": 11, "♦️12": 12, "♦️13": 13,
-         "♣️1": 1, "♣️2": 2, "♣️3": 3, "♣️4": 4, "♣️5": 5, "♣️6": 6, "♣️7": 7, "♣️8": 8, "♣️9": 9, "♣️10": 10, "♣️11": 11, "♣️12": 12, "♣️13": 13}
+value = {"♠️A": 1, "♠️2": 2, "♠️3": 3, "♠️4": 4, "♠️5": 5, "♠️6": 6, "♠️7": 7, "♠️8": 8, "♠️9": 9, "♠️10": 10, "♠️J": 11, "♠️K": 12, "♠️Q": 13,
+         "♥️A": 1, "♥️2": 2, "♥️3": 3, "♥️4": 4, "♥️5": 5, "♥️6": 6, "♥️7": 7, "♥️8": 8, "♥️9": 9, "♥️10": 10, "♥️J": 11, "♥️K": 12, "♥️Q": 13,
+         "♦️A": 1, "♦️2": 2, "♦️3": 3, "♦️4": 4, "♦️5": 5, "♦️6": 6, "♦️7": 7, "♦️8": 8, "♦️9": 9, "♦️10": 10, "♦️J": 11, "♦️K": 12, "♦️Q": 13,
+         "♣️A": 1, "♣️2": 2, "♣️3": 3, "♣️4": 4, "♣️5": 5, "♣️6": 6, "♣️7": 7, "♣️8": 8, "♣️9": 9, "♣️10": 10, "♣️J": 11, "♣️K": 12, "♣️Q": 13}
 
 
 class Poker(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.cards = ["♠️1", "♠️2", "♠️3", "♠️4", "♠️5", "♠️6", "♠️7", "♠️8", "♠️9", "♠️10", "♠️11", "♠️12", "♠️13",
-                      "♥️1", "♥️2", "♥️3", "♥️4", "♥️5", "♥️6", "♥️7", "♥️8", "♥️9", "♥️10", "♥️11", "♥️12", "♥️13",
-                      "♦️1", "♦️2", "♦️3", "♦️4", "♦️5", "♦️6", "♦️7", "♦️8", "♦️9", "♦️10", "♦️11", "♦️12", "♦️13",
-                      "♣️1", "♣️2", "♣️3", "♣️4", "♣️5", "♣️6", "♣️7", "♣️8", "♣️9", "♣️10", "♣️11", "♣️12", "♣️13"]  # array of deck of cards
+        self.cards = []  # array of deck of cards
         self.money = 0
         self.pot = 0
         self.round_num = 0
@@ -76,35 +72,48 @@ class Poker(commands.Cog):
         round_card = self.cards[random.randint(0, len(self.cards)-1)]
         self.table.append(round_card)
         self.cards.remove(round_card)
-        return self.table
 
     def winner(self):
         score = 0
         bot_score = 0
-        self.hand.append(self.table)
-        self.bot_hand.append(self.table)
+        values = []
+        bot_values = []
+        self.hand.extend(self.table)
+        self.bot_hand.extend(self.table)
         for card in self.hand:
             for i in range(0, len(self.hand)-1):
                 if value[card] == value[(self.hand[(len(self.hand)-1)-i])]:
                     score += 1
+            values.append(value[card])
         for card in self.bot_hand:
             for i in range(0, len(self.bot_hand)-1):
                 if value[card] == value[(self.bot_hand[(len(self.bot_hand)-1)-i])]:
                     bot_score += 1
-        if score > bot_score:
+            bot_values.append(value[card])
+        if score == bot_score:
+            if max(values) > max(bot_values):
+                winner = True
+            else:
+                winner = False
+        elif score > bot_score:
             winner = True
-        else:
+        elif score < bot_score:
             winner = False
+
         return winner
 
     @commands.command(name='poker')
-    async def poker(self, ctx, *, game_handler, bet_amount=0):
+    async def poker(self, ctx, *, game_handler):
         # detect the command
         if game_handler == "start":
             self.game_start = True
             self.pot = 0
             self.round_num = 1
             self.money = 2500
+            self.cards = ["♠️A", "♠️2", "♠️3", "♠️4", "♠️5", "♠️6", "♠️7", "♠️8", "♠️9", "♠️10", "♠️J", "♠️Q", "♠️K",
+                          "♥️A", "♥️2", "♥️3", "♥️4", "♥️5", "♥️6", "♥️7", "♥️8", "♥️9", "♥️10", "♥️J", "♥️Q", "♥️K",
+                          "♦️A", "♦️2", "♦️3", "♦️4", "♦️5", "♦️6", "♦️7", "♦️8", "♦️9", "♦️10", "♦️J", "♦️Q", "♦️K",
+                          "♣️A", "♣️2", "♣️3", "♣️4", "♣️5", "♣️6", "♣️7", "♣️8", "♣️9", "♣️10", "♣️J", "♣️Q", "♣️K"]
             self.table = []
             self.hand = []
             self.bot_hand = []
@@ -114,28 +123,45 @@ class Poker(commands.Cog):
             self.bot_hand = self.deal()
             await ctx.send("Your cards are `{}` and `{}`. What would you like to do?".format(self.hand[0], self.hand[1]))
 
-        elif game_handler == "bet":
-            if self.round_num == 1:
-                self.table = self.round(int(bet_amount))
-                await ctx.send("`{}`".format(self.table[0]))
-                self.round_num += 1
-            elif self.round_num == 2:
-                self.table = self.round(int(bet_amount))
-                await ctx.send("`{}`".format(self.table[1]))
-                self.round_num += 1
-            elif self.round_num == 3:
-                self.table = self.round(int(bet_amount))
-                await ctx.send("`{}`".format(self.table[2]))
-                winner = self.winner()
-                if winner:
-                    await ctx.send("Winner! You win {}.".format(self.pot))
+        elif "bet" in game_handler:
+            bet_amount = int(game_handler.lstrip("bet "))
+            if bet_amount > self.money:
+                await ctx.send("Bet higher than current balance, please try again.")
+                return
+            else:
+                if self.round_num == 1:
+                    self.round(bet_amount)
+                    await ctx.send("${} add to the pot.".format(bet_amount))
+                    await ctx.send("Table: `{}`".format(self.table[0]))
+                    await ctx.send("Hand: `{}` `{}`".format(self.hand[0], self.hand[1]))
+                    self.round_num += 1
+                elif self.round_num == 2:
+                    self.round(bet_amount)
+                    await ctx.send("Table: `{}` `{}`".format(self.table[0], self.table[1]))
+                    await ctx.send("Hand: `{}` `{}`".format(self.hand[0], self.hand[1]))
+                    self.round_num += 1
+                elif self.round_num == 3:
+                    self.round(bet_amount)
+                    winner = self.winner()
+                    await ctx.send("Table: `{}` `{}` `{}`".format(self.table[0], self.table[1], self.table[2]))
+                    await ctx.send("Hand: `{}` `{}`".format(self.hand[0], self.hand[1]))
+                    await ctx.send("Bot's hand: `{}` `{}`".format(self.bot_hand[0], self.bot_hand[1]))
+                    if winner:
+                        self.money += self.pot
+                        await ctx.send("Winner! You win ${}. Your current balance is ${}.".format(self.pot, self.money))
+                    else:
+                        await ctx.send("Loser! You lost ${}. Your current balance is ${}.".format(self.pot, self.money))
+                    self.game_start == False
 
         elif game_handler == "fold":
-            await ctx.send("Fold. Lost {}.".format(self.pot))
+            await ctx.send("Folded. Lost ${}. Your current balance is ${}.".format(self.pot, self.money))
             self.game_start == False
 
         elif game_handler == "help":
-            await ctx.send("`start - starts the game \n bet (amount) - bets amount of money \n check - equal to betting 0 \n fold - folds the for the current game`")
+            await ctx.send("`\n start - starts the game \n bet (amount) - bets amount of money \n check - equal to betting 0 \n fold - folds the for the current game \n rules - displays the rules for the game`")
+
+        elif game_handler == "rules":
+            await ctx.send("`\n This version of Poker is played against a bot. The player is given a hand and given a choice to bet or fold each round. Each round a new card will be placed on the table. Once the third card is placed, the game is over and the person with the most pairs wins. Aces are equal to 1 in this version.`")
 
 
 @ client.command()
