@@ -18,13 +18,22 @@ async def on_ready():
 
 
 @client.command()
-async def balance(ctx):
+async def balance(ctx, user: discord.Member = None):
     # Check if the user has a balance in the dictionary
-    if ctx.author.id in user_money:
-        await ctx.send(f'Your current balance is ${user_money[ctx.author.id]:,.2f}')
+    if user:  # checks if there was a user in command
+        if user.id in user_money:  # checks if user is in dictionary
+            await ctx.send(f"{user.mention}'s current balance is ${user_money[user.id]:,.2f}")
+        else:
+            # otherwise give a balance to user
+            user_money[user.id] = 2500.00
+            await ctx.send(f"{user.mention}'s current balance is ${user_money[user.id]:,.2f}")
     else:
-        user_money[ctx.author.id] = 2500.00
-        await ctx.send(f'Your current balance is ${user_money[ctx.author.id]:,.2f}')
+        if ctx.author.id in user_money:
+            await ctx.send(f'Your current balance is ${user_money[ctx.author.id]:,.2f}')
+        else:
+            # otherwise give a balance
+            user_money[ctx.author.id] = 2500.00
+            await ctx.send(f'Your current balance is ${user_money[ctx.author.id]:,.2f}')
 
 
 @client.command()
@@ -58,8 +67,8 @@ class Poker(commands.Cog):
                       "♣️A": 1, "♣️2": 2, "♣️3": 3, "♣️4": 4, "♣️5": 5, "♣️6": 6, "♣️7": 7, "♣️8": 8, "♣️9": 9, "♣️10": 10, "♣️J": 11, "♣️K": 12, "♣️Q": 13}
 
     def deal(self):
-        hand = []
-        for card in range(0, 2):
+        hand = []  # empty hand
+        for card in range(0, 2):  # for each card pick a random from deck
             card = self.cards[random.randint(0, len(self.cards)-1)]
             self.cards.remove(card)
             hand.append(card)
@@ -67,8 +76,9 @@ class Poker(commands.Cog):
 
     def round(self, bet):
         self.pot += bet
-        self.money -= bet
-        round_card = self.cards[random.randint(0, len(self.cards)-1)]
+        self.money -= bet  # simple money handling for each round
+        round_card = self.cards[random.randint(
+            0, len(self.cards)-1)]  # pick our round card
         self.table.append(round_card)
         self.cards.remove(round_card)
 
@@ -77,14 +87,16 @@ class Poker(commands.Cog):
         bot_score = 0
         values = []
         bot_values = []
-        for card in self.hand:
-            values.append(self.value[card])
-        for card in self.bot_hand:
-            bot_values.append(self.value[card])
+        # since our table cards are technically included in our hands
         self.hand.extend(self.table)
         self.bot_hand.extend(self.table)
         for card in self.hand:
+            values.append(self.value[card])  # get values of our cards
+        for card in self.bot_hand:
+            bot_values.append(self.value[card])
+        for card in self.hand:  # check each card in hand
             for i in range(0, len(self.hand)-1):
+                # this will check each value against the value of the reversed hand
                 if self.value[card] == self.value[(self.hand[(len(self.hand)-1)-i])]:
                     score += 1
                     self.hand.remove(card)
@@ -94,12 +106,14 @@ class Poker(commands.Cog):
                     bot_score += 1
                     self.bot_hand.remove(card)
 
-        if score == bot_score:
-            if max(values) > max(bot_values):
+        if score == bot_score:  # ties
+            if max(values) > max(bot_values):  # for higher card
+                self.money += self.pot
                 await ctx.send(f"Tie! You win ${self.pot:,.2f} with the higher card. Your current balance is ${self.money:,.2f}.")
-            else:
+            else:  # means bot has higher card
                 await ctx.send(f"Tie! The bot wins with the higher card. You lose ${self.pot:,.2f} Your current balance is ${self.money:,.2f}.")
-        elif score > bot_score:
+        elif score > bot_score:  # should mean this person has more pairs
+            self.money += self.pot
             await ctx.send(f"Winner! You win ${self.pot:,.2f}. Your current balance is ${self.money:,.2f}.")
         elif score < bot_score:
             await ctx.send(f"You lost ${self.pot:,.2f}. Your current balance is ${self.money:,.2f}.")
@@ -131,25 +145,25 @@ class Poker(commands.Cog):
 
         elif "bet" in game_handler:
             bet_amount = int(game_handler.lstrip("bet "))
-            if bet_amount > self.money:
+            if bet_amount > self.money:  # prevent people from betting too much
                 await ctx.send("Bet higher than current balance, please try again.")
                 return
             else:
                 if self.round_num == 1:
                     self.round(bet_amount)
-                    await ctx.send(f"${bet_amount:,.2f} add to the pot.")
+                    await ctx.send(f"${bet_amount:,.2f} added to the pot.")
                     await ctx.send("Table: `{}`".format(self.table[0]))
                     await ctx.send("Hand: `{}` `{}`".format(self.hand[0], self.hand[1]))
                     self.round_num += 1
                 elif self.round_num == 2:
                     self.round(bet_amount)
-                    await ctx.send(f"${bet_amount:,.2f} add to the pot.")
+                    await ctx.send(f"${bet_amount:,.2f} added to the pot.")
                     await ctx.send("Table: `{}` `{}`".format(self.table[0], self.table[1]))
                     await ctx.send("Hand: `{}` `{}`".format(self.hand[0], self.hand[1]))
                     self.round_num += 1
                 elif self.round_num == 3:
                     self.round(bet_amount)
-                    await ctx.send(f"${bet_amount:,.2f} add to the pot.")
+                    await ctx.send(f"${bet_amount:,.2f} added to the pot.")
                     await ctx.send("Table: `{}` `{}` `{}`".format(self.table[0], self.table[1], self.table[2]))
                     await ctx.send("Hand: `{}` `{}`".format(self.hand[0], self.hand[1]))
                     await ctx.send("Bot's hand: `{}` `{}`".format(self.bot_hand[0], self.bot_hand[1]))
@@ -170,6 +184,7 @@ class Poker(commands.Cog):
 class Blackjack(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        # the values for blackjack
         self.value = {"♠️A": 1, "♠️2": 2, "♠️3": 3, "♠️4": 4, "♠️5": 5, "♠️6": 6, "♠️7": 7, "♠️8": 8, "♠️9": 9, "♠️10": 10, "♠️J": 10, "♠️K": 10, "♠️Q": 10,
                       "♥️A": 1, "♥️2": 2, "♥️3": 3, "♥️4": 4, "♥️5": 5, "♥️6": 6, "♥️7": 7, "♥️8": 8, "♥️9": 9, "♥️10": 10, "♥️J": 10, "♥️K": 10, "♥️Q": 10,
                       "♦️A": 1, "♦️2": 2, "♦️3": 3, "♦️4": 4, "♦️5": 5, "♦️6": 6, "♦️7": 7, "♦️8": 8, "♦️9": 9, "♦️10": 10, "♦️J": 10, "♦️K": 10, "♦️Q": 10,
@@ -189,62 +204,49 @@ class Blackjack(commands.Cog):
             hand.append(card)
         return hand
 
-    def values(self, hand):
+    def values(self, hand):  # easy way of getting values for someones hand
         hand_values = []
         for card in hand:
             hand_values.append(self.value[card])
         return hand_values
 
-    def hit(self):
+    def hit(self, hand):  # get a card from the deck and add it to given hand
         card = self.cards[random.randint(0, len(self.cards)-1)]
-        self.hand.append(card)
-        self.hand_values.append(self.value[card])
+        hand.append(card)
         self.cards.remove(card)
-
-    def round(self, bet):
-        self.pot += bet
-        self.money -= bet
+        return hand
 
     async def winner(self, ctx):
-        score = 0
-        bot_score = 0
-        values = []
-        bot_values = []
-        for card in self.hand:
-            values.append(self.value[card])
-        for card in self.bot_hand:
-            bot_values.append(self.value[card])
-        self.hand.extend(self.table)
-        self.bot_hand.extend(self.table)
-        for card in self.hand:
-            for i in range(0, len(self.hand)-1):
-                if self.value[card] == self.value[(self.hand[(len(self.hand)-1)-i])]:
-                    score += self.value[card]
-                    self.hand.remove(card)
-        for card in self.bot_hand:
-            for i in range(0, len(self.bot_hand)-1):
-                if self.value[card] == self.value[(self.bot_hand[(len(self.bot_hand)-1)-i])]:
-                    bot_score += self.value[card]
-                    self.bot_hand.remove(card)
-
-        if score == bot_score:
-            if max(values) > max(bot_values):
-                winner = True
-            else:
-                winner = False
-        elif score > bot_score:
-            winner = True
-        elif score < bot_score:
-            winner = False
-
-        return winner
+        # reveal our dealer's full hand
+        await ctx.send(f"Dealer: `{'` `'.join(self.bot_hand)}`.")
+        # how the normal end of a game is played, dealer must hit til above 17
+        while sum(self.bot_hand_values) < 17:
+            self.bot_hand = self.hit(self.bot_hand)
+            self.bot_hand_values = self.values(self.bot_hand)
+            await ctx.send(f"Dealer: `{'` `'.join(self.bot_hand)}`.")
+            await ctx.send(f"Hand: `{'` `'.join(self.hand)}`.")
+        # if dealer busts and player doesn't
+        if sum(self.bot_hand_values) > 21 and sum(self.hand_values) < sum(self.bot_hand_values):
+            self.pot *= 2
+            self.money += self.pot
+            await ctx.send(f"Dealer busts! You win ${self.pot:,.2f}. Your current balance is ${self.money:,.2f}.")
+        elif (21 - sum(self.hand_values)) < (21 - sum(self.bot_hand_values)):
+            self.pot *= 2
+            self.money += self.pot
+            await ctx.send(f"Winner! You win ${self.pot:,.2f}. Your current balance is ${self.money:,.2f}.")
+        else:  # since we checked our possible wins already, must mean it is a loss
+            await ctx.send(f"You lost ${self.pot:,.2f}. Your current balance is ${self.money:,.2f}.")
+        user_money[ctx.author.id] = self.money
 
     @commands.command(name='blackjack')
     async def blackjack(self, ctx, *, game_handler):
         # detect the command
         if "start" in game_handler:
             self.game_start = True
-            bet_amount = int(game_handler.lstrip("start "))
+            try:  # for a default bet
+                bet_amount = int(game_handler.lstrip("start "))
+            except:
+                bet_amount = 100.00
             if ctx.author.id not in user_money:  # from our 'balance' command
                 user_money[ctx.author.id] = 2500.00
             self.money = user_money[ctx.author.id]
@@ -256,11 +258,13 @@ class Blackjack(commands.Cog):
             self.hand = []
             self.hand_values = []
             self.bot_hand = []
+            self.pot = 0
             # random card from deck
             # when we take a card from a deck, we are removing the card
             self.hand = self.deal()
             self.bot_hand = self.deal()
             self.hand_values = self.values(self.hand)
+            self.bot_hand_values = self.values(self.bot_hand)
             self.pot += bet_amount
             self.money -= bet_amount
             await ctx.send(f"${bet_amount:,.2f} add to the pot.")
@@ -268,17 +272,18 @@ class Blackjack(commands.Cog):
             await ctx.send("Hand: `{}` `{}`. What would you like to do?".format(self.hand[0], self.hand[1]))
 
         elif game_handler == "hit":
-            self.hit()
+            self.hand = self.hit(self.hand)
+            # to keep getting our values for each hit
+            self.hand_values = self.values(self.hand)
             await ctx.send("Dealer: `  ` `{}`".format(self.bot_hand[1]))
             if sum(self.hand_values) == 21:
-                await self.winner()
-            if len(self.hand) == 3:
-                await ctx.send("Hand: `{}` `{}` `{}`. What would you like to do?".format(self.hand[0], self.hand[1], self.hand[2]))
-            if len(self.hand) == 4:
-                await ctx.send("Hand: `{}` `{}` `{}` `{}`. What would you like to do?".format(self.hand[0], self.hand[1], self.hand[2], self.hand[3]))
+                await self.winner(ctx)
+                return
+            # so we don't have to use different print statements for each card
+            await ctx.send(f"Hand: `{'` `'.join(self.hand)}`. What would you like to do?")
 
         elif game_handler == "stand":
-            await ctx.send("Dealer: `{}` `{}`".format(self.bot_hand[0], self.bot_hand[1]))
+            await self.winner(ctx)
 
         elif game_handler == "fold":
             await ctx.send(f"Folded. Lost ${self.pot:,.2f}. Your current balance is ${self.money:,.2f}.")
@@ -286,10 +291,10 @@ class Blackjack(commands.Cog):
             self.game_start == False
 
         elif game_handler == "help":
-            await ctx.send("`\n start - starts the game \n bet (amount) - bets amount of money \n check - equal to betting 0 \n fold - folds the for the current game \n rules - displays the rules for the game`")
+            await ctx.send("`\n start (amount) - starts the game with bet amount \n  \n fold - folds the for the current game \n rules - displays the rules for the game`")
 
         elif game_handler == "rules":
-            await ctx.send("`\n This version of Poker is played against a bot. The player is given a hand and given a choice to bet or fold each round. Each round a new card will be placed on the table. Once the third card is placed, the game is over and the person with the most pairs wins. Aces are equal to 1 in this version.`")
+            await ctx.send("`\n This version of Blackjack`")
 
 
 @ client.command()
