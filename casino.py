@@ -125,6 +125,7 @@ class Poker(commands.Cog):
         # detect the command
         if game_handler == "start":
             self.game_start = True
+            self.game = []
             self.pot = 0
             self.round_num = 1
             if ctx.author.id not in user_money:  # from our 'balance' command
@@ -137,11 +138,26 @@ class Poker(commands.Cog):
             self.table = []
             self.hand = []
             self.bot_hand = []
-            # random card from deck
-            # when we take a card from a deck, we are removing the card
-            self.hand = self.deal()
-            self.bot_hand = self.deal()
-            await ctx.send("Your cards are `{}` and `{}`. What would you like to do?".format(self.hand[0], self.hand[1]))
+            if len(self.game) == 0:
+                self.game.append(ctx.author.id)
+                await ctx.send("1/8 players. User !poker join to join. User !poker start to start!") # for our start
+            
+            elif len(self.game) == 1:
+                self.hand = self.deal()
+                self.bot_hand = self.deal()
+                await ctx.send("Your cards are `{}` and `{}`. What would you like to do?".format(self.hand[0], self.hand[1]))
+            
+            elif len(self.game) > 1 and len(self.game) < 8:
+                self.game.append(ctx.author.id)
+                await ctx.send("{}/8 players. User !poker join to join.".format(len(self.game))) # for our start
+            else:
+                await ctx.send("Too many players!")
+        
+        elif game_handler == "join":
+            if ctx.author.id not in self.game:
+                self.game.append(ctx.author.id)
+            else:
+                await ctx.send("Already in the game!")
 
         elif "bet" in game_handler:
             bet_amount = int(game_handler.lstrip("bet "))
@@ -224,13 +240,13 @@ class Blackjack(commands.Cog):
             self.bot_hand = self.hit(self.bot_hand)
             self.bot_hand_values = self.values(self.bot_hand)
             await ctx.send(f"Dealer: `{'` `'.join(self.bot_hand)}`.")
-            await ctx.send(f"Hand: `{'` `'.join(self.hand)}`.")
+        await ctx.send(f"Hand: `{'` `'.join(self.hand)}`.")
         # if dealer busts and player doesn't
         if sum(self.bot_hand_values) > 21 and sum(self.hand_values) < sum(self.bot_hand_values):
             self.pot *= 2
             self.money += self.pot
             await ctx.send(f"Dealer busts! You win ${self.pot:,.2f}. Your current balance is ${self.money:,.2f}.")
-        elif (21 - sum(self.hand_values)) < (21 - sum(self.bot_hand_values)):
+        elif sum(self.hand_values) <= 21 and (21 - sum(self.hand_values)) < (21 - sum(self.bot_hand_values)):
             self.pot *= 2
             self.money += self.pot
             await ctx.send(f"Winner! You win ${self.pot:,.2f}. Your current balance is ${self.money:,.2f}.")
