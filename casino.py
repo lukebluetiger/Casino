@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import random
+import time
 
 token = open('C:/Users/Luke/Documents/casino/token.txt')
 
@@ -293,6 +294,13 @@ class Blackjack(commands.Cog):
             self.hand_values = self.values(self.hand)
             await ctx.send("Dealer: `  ` `{}`".format(self.bot_hand[1]))
             if sum(self.hand_values) == 21:
+                await ctx.send(f"Hand: `{'` `'.join(self.hand)}`.")
+                await ctx.send("Blackjack!")
+                await self.winner(ctx)
+                return
+            elif sum(self.hand_values) > 21:
+                await ctx.send(f"Hand: `{'` `'.join(self.hand)}`.")
+                await ctx.send("Bust!")
                 await self.winner(ctx)
                 return
             # so we don't have to use different print statements for each card
@@ -310,14 +318,13 @@ class Blackjack(commands.Cog):
             await ctx.send("`\n start (amount) - starts the game with bet amount \n  \n fold - folds the for the current game \n rules - displays the rules for the game`")
 
         elif game_handler == "rules":
-            await ctx.send("`\n This version of Blackjack`")
+            await ctx.send("`\n This version of Blackjack is played against the bot. Players bet in round one with !blackjack start (bet).`")
 
 
 @ client.command()
-async def gamba(ctx, *, gambaamount=10):
-    for messagecount in range(0, gambaamount):
-        await ctx.send("GAMBA ")
-
+async def roulette(ctx, *, bet, bet_amount):
+    wheel = {0:'green', 00:'green',1:'red',2:'black',3:'red',4:'black',5:'red',6:'black',7:'red',8:'black',9:'red',10:'black',11:'black',12:'red',13:'black',14:'red',15:'black',16:'red',17:'black',18:'red'
+             ,19:'black',20:'black',21:'red',22:'black',23:'red',24:'black',25:'red',26:'black',27:'red',28:'black', 29:'black',30:'red',31:'black',32:'red',33:'black',34:'red',35:'black',36:'red'}
 
 client.run(
     token.read())
