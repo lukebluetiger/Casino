@@ -124,7 +124,7 @@ class Poker(commands.Cog):
     @commands.command(name='poker')
     async def poker(self, ctx, *, game_handler):
         # detect the command
-        if game_handler == "start":
+        if game_handler == "start" and not self.game_start:
             self.game_start = True
             self.game = []
             self.pot = 0
@@ -140,8 +140,8 @@ class Poker(commands.Cog):
             self.hand = []
             self.bot_hand = []
             if len(self.game) == 0:
-                self.game.append(ctx.author.id)
-                await ctx.send("1/8 players. User !poker join to join. User !poker start to start!") # for our start
+                self.game.append(ctx.author)
+                await ctx.send("{}/8 players. User !poker join to join. {}, use !poker start to start!".format(len(self.game),self.game[0].mention)) # for our start
             
             elif len(self.game) == 1:
                 self.hand = self.deal()
@@ -149,16 +149,24 @@ class Poker(commands.Cog):
                 await ctx.send("Your cards are `{}` and `{}`. What would you like to do?".format(self.hand[0], self.hand[1]))
             
             elif len(self.game) > 1 and len(self.game) < 8:
-                self.game.append(ctx.author.id)
-                await ctx.send("{}/8 players. User !poker join to join.".format(len(self.game))) # for our start
+                self.game.append(ctx.author)
+                await ctx.send("{}/8 players. User !poker join to join. {}, use !poker start to start!".format(len(self.game),self.game[0].mention))
             else:
                 await ctx.send("Too many players!")
         
         elif game_handler == "join":
-            if ctx.author.id not in self.game:
-                self.game.append(ctx.author.id)
+            if ctx.author not in self.game:
+                self.game.append(ctx.author)
+                await ctx.send("{} joined the game!".format(ctx.author.mention))
             else:
                 await ctx.send("Already in the game!")
+        
+        elif game_handler == "start" and ctx.author==self.game[0]:
+            game = {}
+            for player in self.game:
+                game[player] = self.deal() # assign each player in dictionary a hand
+                await player.send("Your cards are `{}` and `{}`.".format(game[player][0], game[player][1])) # DM our cards so they are hidden
+            await ctx.send("Cards have been selected. Check your DMs for your hand.")
 
         elif "bet" in game_handler:
             bet_amount = int(game_handler.lstrip("bet "))
