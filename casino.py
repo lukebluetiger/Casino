@@ -81,6 +81,8 @@ class Poker(commands.Cog):
             0, len(self.cards)-1)]  # pick our round card
         self.table.append(round_card)
         self.cards.remove(round_card)
+    
+    
 
     async def winner(self, ctx):
         score = 0
@@ -133,12 +135,12 @@ class Poker(commands.Cog):
         
         elif not self.game_start: # to confirm there is not a game currently happening 
             if game_handler == "start":
+                # initialize the empty values for our start
                 self.players = []
+                self.game = {}
                 self.pot = 0
                 self.round_num = 1
-                if ctx.author.id not in user_money:  # from our 'balance' command
-                    user_money[ctx.author.id] = 2500.00
-                self.money = user_money[ctx.author.id]
+                self.bets = []
                 self.cards = ["♠️A", "♠️2", "♠️3", "♠️4", "♠️5", "♠️6", "♠️7", "♠️8", "♠️9", "♠️10", "♠️J", "♠️Q", "♠️K",
                             "♥️A", "♥️2", "♥️3", "♥️4", "♥️5", "♥️6", "♥️7", "♥️8", "♥️9", "♥️10", "♥️J", "♥️Q", "♥️K",
                             "♦️A", "♦️2", "♦️3", "♦️4", "♦️5", "♦️6", "♦️7", "♦️8", "♦️9", "♦️10", "♦️J", "♦️Q", "♦️K",
@@ -154,17 +156,46 @@ class Poker(commands.Cog):
                 await ctx.send("You must be in a game to use this command! Use `!poker start` to start!") # else the player is probably trying to use a game specific command while not in a game   
         
         elif self.game_start:
-            if game_handler == "start": # confirming the person using 'start' is the one who made the game
-                if len(self.players) > 1 and ctx.author==self.players[0]:
-                    game = {}
-                    for player in self.players:
-                        game[player] = self.deal() # assign each player in dictionary a hand
-                        await player.send("Your cards are `{}` and `{}`.".format(game[player][0], game[player][1])) # DM our cards so they are hidden
-                    await ctx.send("Cards have been selected. Check your DMs for your hand.")
+            if game_handler == "start" and not self.game: # confirming that there isn't a game currently going on
+                if len(self.players) > 1 and ctx.author==self.players[0]: # confirming the person using 'start' is the one who made the game
+                    if self.round_num == 1:
+                        for player in self.players:
+                            self.game[player] = self.deal() # assign each player in dictionary a hand
+                            await player.send("Your cards are `{}` and `{}`.".format(self.game[player][0], self.game[player][1])) # DM our cards so they are hidden
+                        await ctx.send("Cards have been selected. Check your DMs for your hand.")
+
+                        for player in self.players:
+                            if player.id not in user_money:  # from our 'balance' command
+                                user_money[player.id] = 2500.00
+                            self.money = user_money[player.id]
+                            await ctx.send("{} 's turn. What would you like to do?".format(player.mention))
+                            def check(m):
+                                return m.author == player
+                            msg = await client.wait_for('message', check=check)
+
+                            if "bet" in msg.content:
+                                bet_amount = int(msg.content.lstrip("!poker bet "))
+                                if bet_amount > self.money:  # prevent people from betting too much
+                                    await ctx.send("Bet higher than current balance, please try again.")
+                                    return
+                                self.bets.append(bet_amount)
+                                self.round(bet_amount)
+                                await ctx.send(f"${bet_amount:,.2f} added to the pot.")
+                                await ctx.send("Pot: `${}`".format(self.pot))
+                                await ctx.send("Table: `{}`".format(self.table[0]))
+                            
+                            elif "fold" in msg.content:
+                                if self.bets:
+                                    print(int(self.players.index(player)))
+                                    await ctx.send(f"Folded. Lost ${user_money[ctx.author.id] - self.money}. Your current balance is ${self.money:,.2f}.")
+                                    user_money[ctx.author.id] = self.money
+                    
+                            
+
                 elif len(self.players) == 1:
                     await ctx.send("Can't start a game with 1 player!")
                 else:
-                    await ctx.send("Game must be started by {}.".format(self.players[0].mention))
+                    await ctx.send("Game must be started by {}.".format(self.players[0].name))
             
             elif game_handler == "join":
                 if len(self.players) >= 1 and len(self.players) < 8: # confirm the game doesnt have too many players and they're not in the game
@@ -176,34 +207,34 @@ class Poker(commands.Cog):
                 else:
                     await ctx.send("Already in the game!")
 
-            elif "bet" in game_handler:
-                bet_amount = int(game_handler.lstrip("bet "))
-                if bet_amount > self.money:  # prevent people from betting too much
-                    await ctx.send("Bet higher than current balance, please try again.")
-                    return
-                else:
-                    if self.round_num == 1:
-                        self.round(bet_amount)
-                        await ctx.send(f"${bet_amount:,.2f} added to the pot.")
-                        await ctx.send("Pot: `{}`".format(self.pot))
-                        await ctx.send("Table: `{}`".format(self.table[0]))
-                        self.round_num += 1
-                    elif self.round_num == 2:
-                        self.round(bet_amount)
-                        await ctx.send(f"${bet_amount:,.2f} added to the pot.")
-                        await ctx.send("Pot: `{}`".format(self.pot))
-                        await ctx.send("Table: `{}`".format(self.table[0]))
-                        self.round_num += 1
-                    elif self.round_num == 3:
-                        self.round(bet_amount)
-                        await ctx.send(f"${bet_amount:,.2f} added to the pot.")
-                        await ctx.send("Pot: `{}`".format(self.pot))
-                        await ctx.send("Table: `{}`".format(self.table[0]))
-                        await self.winner(ctx)
+            # elif "bet" in game_handler:
+            #     bet_amount = int(game_handler.lstrip("bet "))
+            #     if bet_amount > self.money:  # prevent people from betting too much
+            #         await ctx.send("Bet higher than current balance, please try again.")
+            #         return
+            #     else:
+            #         if self.round_num == 1:
+            #             self.round(bet_amount)
+            #             await ctx.send(f"${bet_amount:,.2f} added to the pot.")
+            #             await ctx.send("Pot: `{}`".format(self.pot))
+            #             await ctx.send("Table: `{}`".format(self.table[0]))
+            #             self.round_num += 1
+            #         elif self.round_num == 2:
+            #             self.round(bet_amount)
+            #             await ctx.send(f"${bet_amount:,.2f} added to the pot.")
+            #             await ctx.send("Pot: `{}`".format(self.pot))
+            #             await ctx.send("Table: `{}`".format(self.table[0]))
+            #             self.round_num += 1
+            #         elif self.round_num == 3:
+            #             self.round(bet_amount)
+            #             await ctx.send(f"${bet_amount:,.2f} added to the pot.")
+            #             await ctx.send("Pot: `{}`".format(self.pot))
+            #             await ctx.send("Table: `{}`".format(self.table[0]))
+            #             await self.winner(ctx)
 
-            elif game_handler == "fold": # a fold
-                await ctx.send(f"Folded. Lost ${self.pot:,.2f}. Your current balance is ${self.money:,.2f}.")
-                user_money[ctx.author.id] = self.money
+            # elif game_handler == "fold": # a fold
+            #     await ctx.send(f"Folded. Lost ${self.pot:,.2f}. Your current balance is ${self.money:,.2f}.")
+            #     user_money[ctx.author.id] = self.money
             
             elif game_handler == "end" and ctx.author == self.players[0]: # a way for the game's creator to end the game
                 await ctx.send("Game ended.")
@@ -307,7 +338,7 @@ class Blackjack(commands.Cog):
                 await ctx.send("Dealer: ` ` `{}`".format(self.bot_hand[1]))
                 await ctx.send("Hand: `{}` `{}`. What would you like to do?".format(self.hand[0], self.hand[1]))
             else:
-                await ctx.send("You must be in a game to use this command! Use `!poker start` to start!") # else the player is probably trying to use a game specific command while not in a game   
+                await ctx.send("You must be in a game to use this command! Use `!blackjack start` to start!") # else the player is probably trying to use a game specific command while not in a game   
         
         elif self.game_start:
             if game_handler == "hit":
@@ -342,6 +373,7 @@ class Blackjack(commands.Cog):
 async def roulette(ctx, *, bet, bet_amount):
     wheel = {0:'green', 00:'green',1:'red',2:'black',3:'red',4:'black',5:'red',6:'black',7:'red',8:'black',9:'red',10:'black',11:'black',12:'red',13:'black',14:'red',15:'black',16:'red',17:'black',18:'red'
              ,19:'black',20:'black',21:'red',22:'black',23:'red',24:'black',25:'red',26:'black',27:'red',28:'black', 29:'black',30:'red',31:'black',32:'red',33:'black',34:'red',35:'black',36:'red'}
+
 
 client.run(
     token.read())
