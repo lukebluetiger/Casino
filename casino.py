@@ -82,9 +82,7 @@ class Poker(commands.Cog):
         self.table.append(round_card)
         self.cards.remove(round_card)
     
-    
-
-    async def winner(self, ctx):
+    async def faceoff(self, ctx):
         score = 0
         bot_score = 0
         values = []
@@ -114,12 +112,11 @@ class Poker(commands.Cog):
                 await ctx.send(f"Tie! You win ${self.pot:,.2f} with the higher card. Your current balance is ${self.money:,.2f}.")
             else:  # means bot has higher card
                 await ctx.send(f"Tie! The bot wins with the higher card. You lose ${self.pot:,.2f} Your current balance is ${self.money:,.2f}.")
-        elif score > bot_score:  # should mean this person has more pairs
-            self.money += self.pot
-            await ctx.send(f"Winner! You win ${self.pot:,.2f}. Your current balance is ${self.money:,.2f}.")
-        elif score < bot_score:
-            await ctx.send(f"You lost ${self.pot:,.2f}. Your current balance is ${self.money:,.2f}.")
-        user_money[ctx.author.id] = self.money
+
+    async def winner(self, ctx, player):
+        self.money += self.pot
+        await ctx.send(f"Winner! {player.mention} wins ${self.pot:,.2f}. Your current balance is ${self.money:,.2f}.")
+        user_money[player.id] = self.money
         self.game_start == False
 
     @commands.command(name='poker')
@@ -163,33 +160,37 @@ class Poker(commands.Cog):
                             self.game[player] = self.deal() # assign each player in dictionary a hand
                             await player.send("Your cards are `{}` and `{}`.".format(self.game[player][0], self.game[player][1])) # DM our cards so they are hidden
                         await ctx.send("Cards have been selected. Check your DMs for your hand.")
+                        while self.round_num < 3:
+                            for player in self.players:
+                                if player.id not in user_money:  # from our 'balance' command
+                                    user_money[player.id] = 2500.00
+                                self.money = user_money[player.id]
+                                await ctx.send("{} 's turn. What would you like to do?".format(player.mention))
+                                def check(m):
+                                    return m.author == player
+                                msg = await client.wait_for('message', check=check)
 
-                        for player in self.players:
-                            if player.id not in user_money:  # from our 'balance' command
-                                user_money[player.id] = 2500.00
-                            self.money = user_money[player.id]
-                            await ctx.send("{} 's turn. What would you like to do?".format(player.mention))
-                            def check(m):
-                                return m.author == player
-                            msg = await client.wait_for('message', check=check)
-
-                            if "bet" in msg.content:
-                                bet_amount = int(msg.content.lstrip("!poker bet "))
-                                if bet_amount > self.money:  # prevent people from betting too much
-                                    await ctx.send("Bet higher than current balance, please try again.")
-                                    return
-                                self.bets.append(bet_amount)
-                                self.round(bet_amount)
-                                await ctx.send(f"${bet_amount:,.2f} added to the pot.")
-                                await ctx.send("Pot: `${}`".format(self.pot))
-                                await ctx.send("Table: `{}`".format(self.table[0]))
-                            
-                            elif "fold" in msg.content:
-                                if self.bets:
+                                if "bet" in msg.content:
+                                    bet_amount = int(msg.content.lstrip("!poker bet "))
+                                    if bet_amount > self.money:  # prevent people from betting too much
+                                        await ctx.send("Bet higher than current balance, please try again.")
+                                        return
+                                    self.bets.append(bet_amount)
+                                    self.round(bet_amount)
+                                    await ctx.send(f"${bet_amount:,.2f} added to the pot.")
+                                    await ctx.send("Pot: `${}`".format(self.pot))
+                                    await ctx.send("Table: `{}`".format(self.table[0]))
+                                
+                                elif "fold" in msg.content:
                                     print(int(self.players.index(player)))
-                                    await ctx.send(f"Folded. Lost ${user_money[ctx.author.id] - self.money}. Your current balance is ${self.money:,.2f}.")
+                                    await ctx.send(f"Folded. Your current balance is ${self.money:,.2f}.")
                                     user_money[ctx.author.id] = self.money
-                    
+                                    self.players.remove(player)
+                                    if len(self.players) == 1:
+                                        await self.winner(self.players[0])
+                                
+                                self.round_num += 1
+                
                             
 
                 elif len(self.players) == 1:
