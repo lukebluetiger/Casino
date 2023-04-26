@@ -15,6 +15,7 @@ async def on_ready():
     print(f'{client.user.name} has connected to Discord!')
     await client.add_cog(Poker(bot=client))
     await client.add_cog(Blackjack(bot=client))
+    await client.add_cog(Roulette(bot=client))
 
 
 @client.command()
@@ -372,11 +373,48 @@ class Blackjack(commands.Cog):
 
 
 
-@ client.command()
-async def roulette(ctx, *, bet, bet_amount):
-    wheel = {0:'green', 00:'green',1:'red',2:'black',3:'red',4:'black',5:'red',6:'black',7:'red',8:'black',9:'red',10:'black',11:'black',12:'red',13:'black',14:'red',15:'black',16:'red',17:'black',18:'red'
-             ,19:'black',20:'black',21:'red',22:'black',23:'red',24:'black',25:'red',26:'black',27:'red',28:'black', 29:'black',30:'red',31:'black',32:'red',33:'black',34:'red',35:'black',36:'red'}
+class Roulette(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+        self.bets = {}  # array of deck of cards
+        self.money = 0
+        self.pot = 0
+        self.game_start = False
 
+    @commands.command()
+    async def roulette(self, ctx, *, bet):
+        wheel = {0:'green',1:'red',2:'black',3:'red',4:'black',5:'red',6:'black',7:'red',8:'black',9:'red',10:'black',11:'black',12:'red',13:'black',14:'red',15:'black',16:'red',17:'black',18:'red'
+                ,19:'black',20:'black',21:'red',22:'black',23:'red',24:'black',25:'red',26:'black',27:'red',28:'black', 29:'black',30:'red',31:'black',32:'red',33:'black',34:'red',35:'black',36:'red'}
+        print(bet.split(" "))
+        if self.game_start == False:
+            if bet == "start":
+                self.bets = {}
+                if ctx.author.id not in user_money:  # from our 'balance' command
+                        user_money[ctx.author.id] = 2500.00
+                self.money = user_money[ctx.author.id]
+                await ctx.send(f"Spinning. 5 bets remaining. Use `!roulette <bet> <amount>`!")
+                self.game_start = True
+        
+        elif self.game_start == True:
+            x = bet.split(" ") # split message by space 
+            bet_amount = int(x[1]) # amount is second argument
+            bet = x[0] # bet is first
+            if bet in wheel.values():
+                self.bets[bet] = bet_amount
+                print(self.bets)
+            if int(bet) in wheel.keys():
+                self.bets[int(bet)] = bet_amount
+            if len(self.bets) == 3 or "stop" in bet:
+                result = [] 
+                result.append(random.randint(0, 35))
+                result.append(wheel[result[0]])
+                await ctx.send("Betting over! Result of spin: `{} {}`.".format(result[1], result[0]))
+                if result[0] or result[1] in self.bets:
+                    await ctx.send("Winner!")
+            print(bet)
+            print(self.bets)
+            print(wheel.keys())
+        
 
 client.run(
     token.read())
