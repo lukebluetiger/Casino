@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from economy import Economy, load, dump
+from economy import Economy
 from poker import Poker
 from blackjack import Blackjack
 from roulette import Roulette
@@ -14,12 +14,10 @@ client = commands.Bot(
 @client.event
 async def on_ready():
     print(f'{client.user.name} has connected to Discord!')
-    await client.add_cog(Economy(bot=client))
-    await client.add_cog(Poker(bot=client))
-    await client.add_cog(Blackjack(bot=client))
-    await client.add_cog(Roulette(bot=client))
-
-
+    await client.add_cog(Economy(client))
+    await client.add_cog(Poker(client))
+    await client.add_cog(Blackjack(client))
+    await client.add_cog(Roulette(client))
 
 client.run(
     token.read())

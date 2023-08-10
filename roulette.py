@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 import random
-from economy import load, dump
+from economy import load, change
 
 user_money = load()
 
@@ -21,9 +21,9 @@ class Roulette(commands.Cog):
         if self.game_start == False:
             if bet == "start":
                 self.bets = {}
-                if ctx.author.id not in user_money:  # from our 'balance' command
-                        user_money[ctx.author.id] = 2500.00
-                self.money = user_money[ctx.author.id]
+                if str(ctx.author.id) not in user_money:  # from our 'balance' command
+                    change(ctx.author, 2500, user_money)
+                self.money = user_money[str(ctx.author.id)]
                 await ctx.send(f"Spinning. Use `!roulette <bet> <amount>`, or use `!roulette stop` to end!")
                 self.game_start = True
         
@@ -39,22 +39,22 @@ class Roulette(commands.Cog):
                 await ctx.send("Betting over! Result of spin: `{} {}`.".format(result[1], result[0]))
                 if result[0] in self.bets.keys(): # if the number is correct that means the player wins more
                     self.money += (35 * self.bets[result[0]])
-                    user_money[ctx.author.id] = self.money
+                    change(ctx.author, self.money, user_money)
                     await ctx.send("Won `${}`. Current balance is `${}`".format(35 * self.bets[result[0]], self.money))
                 elif result[1] in self.bets.keys():
                     self.money += (2 * self.bets[result[1]])
-                    user_money[ctx.author.id] = self.money
+                    change(ctx.author, self.money, user_money)
                     await ctx.send("Won `${}`. Current balance is `${}`".format(2 * self.bets[result[1]], self.money))
             if bet in wheel.values():
                 self.bets[bet] = bet_amount
                 self.money -= bet_amount
-                user_money[ctx.author.id] = self.money
+                change(ctx.author, self.money, user_money)
                 await ctx.send("`${}` on `{}`.".format(self.bets[bet], bet))
             try: # catch the exception so the player wont get an error for not betting on a number
                 if int(bet) in wheel.keys():
                     self.bets[int(bet)] = bet_amount
                     self.money -= bet_amount
-                    user_money[ctx.author.id] = self.money
+                    change(ctx.author, self.money, user_money)
                     await ctx.send("`${}` on `{}`.".format(self.bets[int(bet)], int(bet)))
             except:
                 return

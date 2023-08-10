@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 import random
-from economy import load, dump
+from economy import load, change
 
 user_money = load()
 
@@ -60,7 +60,7 @@ class Blackjack(commands.Cog):
             await ctx.send(f"Winner! You win ${self.pot:,.2f}. Your current balance is ${self.money:,.2f}.")
         else:  # since we checked our possible wins already, must mean it is a loss
             await ctx.send(f"You lost ${self.pot:,.2f}. Your current balance is ${self.money:,.2f}.")
-        user_money[ctx.author.id] = self.money
+        change(ctx.author, self.money, user_money)
 
     @commands.command(name='blackjack')
     async def blackjack(self, ctx, *, game_handler):
@@ -77,9 +77,9 @@ class Blackjack(commands.Cog):
                     bet_amount = int(game_handler.lstrip("start "))
                 except:
                     bet_amount = 100.00
-                if ctx.author.id not in user_money:  # from our 'balance' command
-                    user_money[ctx.author.id] = 2500.00
-                self.money = user_money[ctx.author.id]
+                if str(ctx.author.id) not in user_money:  # from our 'balance' command
+                     change(ctx.author, 2500, user_money)
+                self.money = user_money[str(ctx.author.id)]
                 self.cards = ["♠️A", "♠️2", "♠️3", "♠️4", "♠️5", "♠️6", "♠️7", "♠️8", "♠️9", "♠️10", "♠️J", "♠️Q", "♠️K",
                             "♥️A", "♥️2", "♥️3", "♥️4", "♥️5", "♥️6", "♥️7", "♥️8", "♥️9", "♥️10", "♥️J", "♥️Q", "♥️K",
                             "♦️A", "♦️2", "♦️3", "♦️4", "♦️5", "♦️6", "♦️7", "♦️8", "♦️9", "♦️10", "♦️J", "♦️Q", "♦️K",
@@ -97,6 +97,7 @@ class Blackjack(commands.Cog):
                 self.bot_hand_values = self.values(self.bot_hand)
                 self.pot += bet_amount
                 self.money -= bet_amount
+                change(ctx.author, self.money, user_money)
                 await ctx.send(f"${bet_amount:,.2f} add to the pot.")
                 await ctx.send("Dealer: ` ` `{}`".format(self.bot_hand[1]))
                 await ctx.send("Hand: `{}` `{}`. What would you like to do?".format(self.hand[0], self.hand[1]))
@@ -127,5 +128,5 @@ class Blackjack(commands.Cog):
 
             elif game_handler == "fold":
                 await ctx.send(f"Folded. Lost ${self.pot:,.2f}. Your current balance is ${self.money:,.2f}.")
-                user_money[ctx.author.id] = self.money
+                change(ctx.author, self.money, user_money)
                 self.game_start = False

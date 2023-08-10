@@ -1,7 +1,10 @@
 import discord
 from discord.ext import commands
 import random
-from economy import load, dump
+from economy import load, change
+
+client = commands.Bot(
+    command_prefix='!', intents=discord.Intents.all(), )  # v2
 
 user_money = load()
 
@@ -27,10 +30,10 @@ class Poker(commands.Cog):
         return hand
 
     def bet(self, player, bet):  # simple money handling for each bet
-        self.money = user_money[player.id]
+        self.money = user_money[str(player.id)]
         self.money -= bet 
         self.pot += bet
-        user_money[player.id] = self.money
+        change(player, self.money, user_money)
 
     def round(self): 
         round_card = self.cards[random.randint(
@@ -69,7 +72,7 @@ class Poker(commands.Cog):
     async def winner(self, ctx, player):
         self.money += self.pot
         await ctx.send(f"Winner! {player.mention} wins ${self.pot:,.2f}. Your current balance is ${self.money:,.2f}.")
-        user_money[player.id] = self.money
+        change(player, self.money, user_money)
         self.game_start == False
 
     async def round1(self, ctx):
@@ -122,9 +125,9 @@ class Poker(commands.Cog):
                 for self.round_num in range(1,3):
                     self.round()
                     for player in self.players:
-                        if player.id not in user_money:  # from our 'balance' command
-                            user_money[player.id] = 2500.00
-                        self.money = user_money[player.id]
+                        if str(player.id) not in user_money:  # from our 'balance' command
+                            change(player, 2500, user_money)
+                        self.money = user_money[str(player.id)]
                         await ctx.send("{} 's turn. What would you like to do?".format(player.mention))
                         def check(m):
                             return m.author == player and "bet" or "fold" in m # confirm this message is our player and they are playing
@@ -141,7 +144,7 @@ class Poker(commands.Cog):
                         
                         elif "fold" in msg.content:
                             await ctx.send(f"Folded. Your current balance is ${self.money:,.2f}.")
-                            user_money[ctx.author.id] = self.money
+                            change(player, self.money, user_money)
                             self.players.remove(player)
                             if len(self.players) == 1:
                                 await self.winner(self.players[0])

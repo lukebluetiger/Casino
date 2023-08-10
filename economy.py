@@ -11,6 +11,18 @@ def load():
         return json.loads(file.read())
 
 user_money = load()
+
+def add(user, amount, user_money):
+    user_money[str(user.id)] += amount
+    dump(user_money)
+
+def subtract(user, amount, user_money):
+    user_money[str(user.id)] -= amount
+    dump(user_money)
+
+def change(user, amount, user_money):
+    user_money[str(user.id)] = amount
+    dump(user_money)
         
 class Economy(commands.Cog):
     def __init__(self, bot):
@@ -25,8 +37,7 @@ class Economy(commands.Cog):
             await ctx.send(f"{user.mention}'s current balance is ${user_money[str(user.id)]:,.2f}")
         else:
             # otherwise give a balance to user
-            user_money[str(user.id)] = 2500.00
-            dump(user_money)
+            change(user, 2500, user_money)
             await ctx.send(f"{user.mention}'s current balance is ${user_money[str(user.id)]:,.2f}")
 
 
@@ -38,13 +49,11 @@ class Economy(commands.Cog):
             return
 
         # Subtract the given amount from the sender's balance and add it to the recipient's balance
-        user_money[str(ctx.author.id)] -= amount
-        dump(user_money)
+        subtract(ctx.author, amount, user_money)
         if str(user.id) in user_money:
-            user_money[str(user.id)] += amount
+            add(user, amount, user)
         else:
-            user_money[str(user.id)] = amount
-        dump(user_money)
+            change(user, amount + 2500, user_money)
         await ctx.send(f'{ctx.author.mention} gave {user.mention} ${amount:,.2f}')
         
     
