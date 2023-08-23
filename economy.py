@@ -51,7 +51,7 @@ class Economy(commands.Cog):
         # Subtract the given amount from the sender's balance and add it to the recipient's balance
         subtract(ctx.author, amount, user_money)
         if str(user.id) in user_money:
-            add(user, amount, user)
+            add(user, amount, amount)
         else:
             change(user, amount + 2500, user_money)
         await ctx.send(f'{ctx.author.mention} gave {user.mention} ${amount:,.2f}')

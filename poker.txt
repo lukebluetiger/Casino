@@ -3,5 +3,17 @@ assign a starting pot
 assign a game start
 
 if player input is start
-    round 1
-    
+	all rounds - for round function
+		must go through each players choice - call, check, bet, raise, or fold
+		add money to the pot
+	round 0 (preflop) - specifities for first round
+		players must be assigned cards
+		players must have or be assigned money
+	round 1 (flop) - specifities for flop
+		3 cards must be drawn to the table instead of one
+	round 2 & 3 - specifities
+		one table card is drawn each
+	showdown - reveal
+		every players cards are revealed
+		winning player is chosen - in case of tie, pot is split equally
+		winner should be chosen by the first, amount of pairs, second, value of pairs, third, value of highest card ( in case no pairs )
